@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>animal-fetch</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        img { max-width: 600px; border: 1px solid #ccc; }
+        .error { color: #b00; }
+    </style>
+</head>
+<body>
+<h1>animal-fetch</h1>
+
+<label>Animal
+    <select id="animal">
+        <option value="cat">cat</option>
+        <option value="dog">dog</option>
+        <option value="bear">bear</option>
+    </select>
+</label>
+<label>Count <input id="count" type="number" min="1" value="1" style="width: 5em"></label>
+<button id="fetchBtn">Fetch &amp; save</button>
+<button id="latestBtn">Show latest</button>
+
+<p id="status"></p>
+<img id="latest" alt="" hidden>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    function status(text, isError) {
+        $('status').textContent = text;
+        $('status').className = isError ? 'error' : '';
+    }
+
+    async function errorMessage(res) {
+        try { return (await res.json()).error; } catch { return res.statusText; }
+    }
+
+    async function showLatest() {
+        const animal = $('animal').value;
+        const res = await fetch(`/api/animals/${animal}/pictures/latest`);
+        if (!res.ok) { $('latest').hidden = true; status('Error ' + res.status + ': ' + await errorMessage(res), true); return; }
+        $('latest').src = URL.createObjectURL(await res.blob());
+        $('latest').hidden = false;
+    }
+
+    $('fetchBtn').onclick = async () => {
+        const animal = $('animal').value;
+        const count = $('count').value;
+        status('Fetching ' + count + ' ' + animal + ' picture(s)...');
+        const res = await fetch(`/api/animals/${animal}/pictures?count=${encodeURIComponent(count)}`, {method: 'POST'});
+        if (!res.ok) { status('Error ' + res.status + ': ' + await errorMessage(res), true); return; }
+        const pictures = await res.json();
+        status('Saved ' + pictures.length + ' ' + animal + ' picture(s): ids ' + pictures.map(p => p.id).join(', '));
+        await showLatest();
+    };
+
+    $('latestBtn').onclick = () => { status(''); showLatest(); };
+</script>
+</body>
+</html>

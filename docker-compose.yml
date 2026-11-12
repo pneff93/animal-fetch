@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: animals
+      POSTGRES_USER: animals
+      POSTGRES_PASSWORD: animals   # local development credentials only
+    ports:
+      - "5432:5432"                # exposed so the app can also run outside Docker
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U animals -d animals"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    pull_policy: build             # rebuild on every `docker compose up -d` so code changes are picked up
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/animals
+      DB_USER: animals
+      DB_PASSWORD: animals
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
